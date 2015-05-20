@@ -2,6 +2,7 @@ import dataset
 import requests
 from urlparse import urljoin
 from lxml import html
+from normality import slugify
 from itertools import count
 
 engine = dataset.connect('sqlite:///data.sqlite')
@@ -9,17 +10,25 @@ notices = engine['data']
 
 
 def scrape_case(url):
-    if notices.find_one(url=url):
-        return
     res = requests.get(url)
-    empty = 'class="nom_fugitif_wanted">Identity unknown</div>' not in res.content
-    if not empty:
-        print "FOUND", url
-    notices.insert({
+    # empty = 'class="nom_fugitif_wanted">Identity unknown</div>' not in res.content
+    #if empty:
+    #     print "MISSING", url
+    #    return
+    doc = html.fromstring(res.content)
+    data = {
         'url': url,
-        'empty': empty,
-        'html': None if empty else res.content
-    })
+        'name': doc.find('.//div[@class="nom_fugitif_wanted"]').text_content(),
+        'reason': doc.find('.//span[@class="nom_fugitif_wanted_small"]').text_content(),
+        # 'html': res.content
+    }
+    for row in doc.findall('.//div[@class="bloc_detail"]//tr'):
+        title, value = row.findall('./td')
+        name = slugify(title.text_content(), sep='_')
+        data[name] = value.text_content().strip()
+
+    print [data['name']]
+    notices.upsert(data, ['url'])
 
 
 def scrape():
