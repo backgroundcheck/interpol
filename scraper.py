@@ -1,3 +1,4 @@
+import os
 import dataset
 import requests
 from urlparse import urljoin
@@ -5,8 +6,9 @@ from lxml import html
 from normality import slugify
 from itertools import count
 
-engine = dataset.connect('sqlite:///data.sqlite')
-notices = engine['data']
+db = os.environ.get('DATABASE_URI', 'sqlite:///data.sqlite')
+engine = dataset.connect(db)
+notices = engine['int_interpol_wanted']
 
 
 def scrape_case(url):
